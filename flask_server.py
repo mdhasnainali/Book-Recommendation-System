@@ -1,53 +1,49 @@
-from flask import Flask, jsonify
-from flask_restful import Resource, Api
-from process_result import get_similar_books, get_homepage, build_model
+from flask import Flask, jsonify, request
+import csv
+
+
 
 
 app = Flask(__name__)
-api = Api(app)
 
+@app.route('/recommended', methods = ['POST'])
+def recommendedBooks():
+    if(request.method == 'POST'):
+        data = request.get_json()
+        return recommend(data)
+    
 
-class ContentBasedBookRecommendation(Resource):
-
-    def get(self, book_id):
-        result = get_similar_books(book_id)
-        data = {
-            "book_id": book_id,
-            "recommended_books": result
-        }
-        return jsonify(data)
-
-
-class CollaborativeFilteringBasedBookRecommendation(Resource):
-
-    def get(self, user_id):
-        result = get_homepage(user_id)
-        data = {
-            "user_id": user_id,
-            "recommended_books": result
-        }
-        return jsonify(data)
-
-
-class BuildTheModel(Resource):
-
-    def get(self):
-        build_model()
-        data = {
-            "message": "The model is executing.."
-        }
-        return jsonify(data)
-
-
-api.add_resource(ContentBasedBookRecommendation,
-                 '/similar_books/<int:book_id>')
-api.add_resource(CollaborativeFilteringBasedBookRecommendation,
-                 '/homepage/<int:user_id>')
-api.add_resource(BuildTheModel,
-                 '/build_model')
-
+@app.route('/newBook', methods = ['POST'])
+def build():
+    if request.method == 'POST':
+        data = request.get_json()
+        
+        # Extract book information
+        book_id = data.get("book_id", "")  # You need to have a book_id in your JSON
+        title = data.get("title", "")
+        description = data.get("description", "")
+        publisher = data.get("publisher", "")
+        category_id = data.get("categoryId", "")
+        
+        # Combine author names using "&"
+        authors = " & ".join([author["author_name"] for author in data.get("bookAuthors", [])])
+        
+        # Create a list with the book information
+        book_info = [book_id, title, description, publisher, category_id, authors]
+        
+        # Define the CSV file path
+        csv_file_path = "./books.csv"
+        
+        # Write the book information to the CSV file
+        with open(csv_file_path, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(book_info)
+        
+        return jsonify({"message": "Book information has been saved to the CSV file re-building the model"})
+        add_book()
+  
 
 # driver function
 if __name__ == '__main__':
-
-    app.run(debug=True)
+    app.run(debug = True)
+ 
